@@ -1,0 +1,110 @@
+version: "3"
+
+networks:
+
+  basecode:
+
+    driver: bridge
+
+services:
+
+  basecode:
+
+    networks:
+
+      - basecode
+
+    build:
+
+      context: "./"
+      dockerfile: "Dockerfile"
+      args:
+
+        APP_TIMEZONE: ${APP_TIMEZONE}
+
+        APP_NAME: ${APP_NAME}
+        APP_ENV: ${APP_ENV}
+        SERVER_HOST: ${SERVER_HOST}
+        SERVER_PORT: ${SERVER_PORT}
+
+    image: "${APP_NAME}"
+    container_name: "${APP_NAME}"
+
+    extra_hosts:
+
+      - "localhost:0.0.0.0"
+
+    ports:
+
+      - ${SERVER_PORT}:${SERVER_PORT}
+
+    # entrypoint: [] #
+    # command: ["tail", "-f", "/dev/null"] #
+
+    depends_on:
+
+      - memory
+      - database
+
+    links:
+
+      - "memory:${APP_NAME}_memory"
+      - "database:${APP_NAME}_database"
+
+    healthcheck:
+
+      test: curl --fail ${SERVER_HOST}:${SERVER_PORT} || exit 1
+      interval: 60s
+      retries: 5
+
+  memory:
+
+    image: redis:5.0.10
+
+    expose:
+
+      - "6379"
+
+    environment:
+
+      TZ: ${APP_TIMEZONE}
+
+    command: redis-server --requirepass ${MM_PASSWORD}
+
+  database:
+
+    image: mariadb:10.5.8
+
+    expose:
+
+      - "3306"
+
+    environment:
+
+      TZ: ${APP_TIMEZONE}
+
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+
+  phpmyadmin:
+
+    image: phpmyadmin/phpmyadmin:4.8.3
+
+    ports:
+
+      - "80"
+
+    environment:
+
+      TZ: ${APP_TIMEZONE}
+
+      PMA_HOST: database
+
+      PMA_USER: ${DB_USERNAME}
+      PMA_PASSWORD: ${DB_PASSWORD}
+
+    depends_on:
+
+      - database
